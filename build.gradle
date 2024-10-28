@@ -8,12 +8,30 @@ repositories {
 }
 
 dependencies {
+    implementation('org.apache.kafka:kafka-clients:3.8.0')
+
+    implementation('com.beust:jcommander:1.82')
+
+    def log4j_version = '1.7.36'
+    implementation("org.slf4j:slf4j-api:${log4j_version}")
+    runtimeOnly("org.slf4j:slf4j-log4j12:${log4j_version}")
+
     testImplementation('junit:junit:4.13')
-    testImplementation("org.hamcrest:hamcrest:2.2")
+    testImplementation('org.hamcrest:hamcrest:2.2')
 }
 
 test {
     testLogging {
         events "passed", "skipped", "failed"
     }
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'kafkarequesttool.Main'
+        attributes("Implementation-Version": "${project.version}")
+    }
+    duplicatesStrategy = DuplicatesStrategy.WARN
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
