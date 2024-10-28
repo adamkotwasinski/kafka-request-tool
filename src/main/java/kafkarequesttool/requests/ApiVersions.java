@@ -1,6 +1,13 @@
 package kafkarequesttool.requests;
 
+import static kafkarequesttool.requests.RequestSender.sendRequest;
+
+import org.apache.kafka.common.message.ApiVersionsResponseData.ApiVersion;
+import org.apache.kafka.common.message.ApiVersionsResponseData.ApiVersionCollection;
 import org.apache.kafka.common.protocol.ApiKeys;
+import org.apache.kafka.common.requests.ApiVersionsResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import kafkarequesttool.BrokerConfig;
 
@@ -12,11 +19,17 @@ import kafkarequesttool.BrokerConfig;
 public class ApiVersions
     implements Invocable {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ApiVersions.class);
+
     @Override
     public void invoke(final BrokerConfig brokerConfig)
             throws Exception {
 
-        RequestSender.sendRequest(ApiKeys.API_VERSIONS, brokerConfig);
+        final ApiVersionsResponse resp = sendRequest(ApiKeys.API_VERSIONS, brokerConfig);
+        final ApiVersionCollection apiVersions = resp.data().apiKeys();
+        for (final ApiVersion av : apiVersions) {
+            LOG.info("{}: {}..{}", ApiKeys.forId(av.apiKey()), av.minVersion(), av.maxVersion());
+        }
     }
 
 }
