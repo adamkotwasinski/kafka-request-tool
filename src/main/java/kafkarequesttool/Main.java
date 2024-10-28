@@ -12,6 +12,7 @@ import com.beust.jcommander.JCommander.Builder;
 
 import kafkarequesttool.requests.ApiVersions;
 import kafkarequesttool.requests.Invocable;
+import kafkarequesttool.requests.Metadata;
 
 /**
  * Main entry point.
@@ -29,6 +30,7 @@ public class Main {
         final Builder builder = JCommander.newBuilder().addObject(brokerConfig);
 
         final List<Class<? extends Invocable>> requestClasses = List.of(
+                Metadata.class,
                 ApiVersions.class);
 
         final Map<String, Invocable> commands = new TreeMap<>();
