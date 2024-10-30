@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
+import kafkarequesttool.NetworkLayerException;
+
 /**
  * Reads a response (its 4-byte length header and N following bytes).
  *
@@ -23,16 +25,10 @@ public class ReadHelper {
 
     public static ByteBuffer receive(final SocketChannel channel) {
         final ReadHelper rh = new ReadHelper();
-        try {
-            return rh.read(channel);
-        }
-        catch (final IOException e) {
-            throw new IllegalArgumentException("IO failure", e);
-        }
+        return rh.read(channel);
     }
 
-    private ByteBuffer read(final SocketChannel channel)
-            throws IOException {
+    private ByteBuffer read(final SocketChannel channel) {
 
         readFullBuffer(channel, this.hb);
 
@@ -41,7 +37,7 @@ public class ReadHelper {
 
         // Empty response has very little sense.
         if (dataLength <= 0) {
-            throw new IOException("Invalid response data length: " + dataLength);
+            throw new NetworkLayerException("Invalid response data length: " + dataLength);
         }
 
         this.db = ByteBuffer.allocate(dataLength);
@@ -51,18 +47,20 @@ public class ReadHelper {
         return this.db;
     }
 
-    private static void readFullBuffer(final SocketChannel channel, final ByteBuffer target)
-            throws IOException {
-
+    private static void readFullBuffer(final SocketChannel channel, final ByteBuffer target) {
         while (target.hasRemaining()) {
-            final int read = channel.read(target);
-            if (-1 == read) {
-                // End of stream.
-                break;
+            try {
+                final int read = channel.read(target);
+                if (-1 == read) { // End of stream.
+                    break;
+                }
+            }
+            catch (final IOException e) {
+                throw new NetworkLayerException("Read failure", e);
             }
         }
         if (target.hasRemaining()) {
-            throw new IOException("Buffer underflow");
+            throw new NetworkLayerException("Buffer underflow");
         }
     }
 
