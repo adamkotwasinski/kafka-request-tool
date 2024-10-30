@@ -1,5 +1,6 @@
 package kafkarequesttool.requests;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -17,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import kafkarequesttool.BrokerConfig;
+import kafkarequesttool.NetworkLayerException;
 
 /**
  * @author adam.kotwasinski
@@ -34,12 +36,10 @@ public class RequestSender {
     @SuppressWarnings("unchecked")
     public static <T extends AbstractResponse> T sendRequest(final ApiMessage message,
                                                              final short version,
-                                                             final BrokerConfig broker)
-            throws Exception {
+                                                             final BrokerConfig broker) {
 
         final ApiKeys apiKey = ApiKeys.forId(message.apiKey());
-        final SocketAddress address = new InetSocketAddress(broker.host, broker.port);
-        try (SocketChannel channel = SocketChannel.open(address)) {
+        try (SocketChannel channel = createChannel(broker)) {
 
             LOG.info("Sending {}/{} to {}", apiKey, version, broker);
             generateAndSendRequest(channel, message, version, CORRELATION_ID);
@@ -47,18 +47,35 @@ public class RequestSender {
             LOG.info("Receiving {}", apiKey);
             return (T) receiveResponse(channel, apiKey, version);
         }
+        catch (final IOException e) {
+            throw new NetworkLayerException("Failed to close channel", e);
+        }
+    }
+
+    private static SocketChannel createChannel(final BrokerConfig broker) {
+        try {
+            final SocketAddress address = new InetSocketAddress(broker.host, broker.port);
+            return SocketChannel.open(address);
+        }
+        catch (final IOException e) {
+            throw new NetworkLayerException("Could not set up channel to " + broker, e);
+        }
     }
 
     private static void generateAndSendRequest(final SocketChannel channel,
                                                final ApiMessage message,
                                                final short version,
-                                               final int correlationId)
-            throws Exception {
+                                               final int correlationId) {
 
         final ApiKeys apiKey = ApiKeys.forId(message.apiKey());
         final RequestHeader header = new RequestHeader(apiKey, version, CLIENT_ID, correlationId);
         final ByteBuffer bytes = toBytes(header, message);
-        channel.write(bytes);
+        try {
+            channel.write(bytes);
+        }
+        catch (final IOException e) {
+            throw new NetworkLayerException("Write failure", e);
+        }
     }
 
     // === MISC ========================================================================================================
