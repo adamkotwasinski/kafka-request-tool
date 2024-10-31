@@ -2,6 +2,7 @@ package kafkarequesttool.requests;
 
 import static kafkarequesttool.requests.RequestSender.sendRequest;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.kafka.common.message.ApiVersionsRequestData;
@@ -48,9 +49,17 @@ public class Metadata
             data.setTopics(null);
         }
         final MetadataResponse response = sendRequest(data, maxMetadataVersion, brokerConfig);
-        for (final TopicMetadata topicMetadata : response.topicMetadata()) {
-            LOG.info("Topic: {} / {}", topicMetadata.topic(), topicMetadata.topicId());
-            LOG.info("Partitions: {}", topicMetadata.partitionMetadata().size());
+
+        LOG.info("Brokers: {}", response.brokers().size());
+        response.brokersById().forEach((id, node) -> {
+            LOG.info("Broker {}: {}", id, node.host(), node.port());
+        });
+
+        final Collection<TopicMetadata> topicMetadata = response.topicMetadata();
+        LOG.info("Topics: {}", topicMetadata.size());
+        for (final TopicMetadata tm : topicMetadata) {
+            LOG.info("Topic: {} / {}", tm.topic(), tm.topicId());
+            LOG.info("Partitions: {}", tm.partitionMetadata().size());
         }
     }
 
